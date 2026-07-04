@@ -105,6 +105,9 @@ async function main() {
     .back { display: inline-block; margin-bottom: 1rem; color: #1e5a8a; text-decoration: none; }
     .note { font-size: 0.85rem; color: #666; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dde3ea; }
     .note--ok { background: #eef8f0; border: 1px solid #b8dcc0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; color: #1f4d2a; font-size: 0.88rem; }
+    .note--warn { background: #fff8e6; border: 1px solid #e6d9a8; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; color: #5c4a00; font-size: 0.88rem; }
+    .field input[type=text] { width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid #c5d0dc; font-family: inherit; font-size: 1rem; }
+    .upload-url { display: block; margin-top: 0.5rem; font-size: 0.75rem; color: #666; font-family: monospace; word-break: break-all; }
     .empty { color: #888; text-align: center; padding: 1rem; }
   </style>
 </head>
@@ -112,11 +115,16 @@ async function main() {
   <div class="wrap">
     <a class="back" href="../">← الصفحة الرئيسية</a>
     <h1>📤 رفع محاضرة</h1>
-    <p class="lead">Fork (مرة واحدة) → رفع المحاضرة → Pull Request. لازم يكونوا <strong>مسجّlin على GitHub</strong>.</p>
+    <p class="lead">ارفع ملف <code>.md</code> جاهز (drag &amp; drop) — مو محرّر نص.</p>
+
+    <div class="note--warn">
+      <strong>ليش طلع محرّر نص؟</strong> الرابط القديم كان <code>/new/</code> (كتابة ولصق).
+      الرفع الحقيقي = <code>/upload/</code> على <strong>نسختك (Fork)</strong> — GitHub ما بيسمح برفع ملفات على المستودع الأصلي بدون صلاحية.
+    </div>
 
     <div class="note--ok">
-      <strong>ما بتحتاجي Collaborator.</strong> المستودع Public + Fork + PR يكفي.
-      عند الحفظ: اختاروا <strong>Propose changes</strong> / <strong>Create a new branch and start a pull request</strong> — مو حفظ مباشر على <code>main</code>.
+      <strong>الترتيب:</strong> Fork → اكتب username → Upload files → Commit → Pull Request.
+      لازم تكون مسجّل دخول على <a href="https://github.com/login" target="_blank" rel="noopener">GitHub</a>.
     </div>
 
     <div class="panel">
@@ -132,6 +140,10 @@ async function main() {
         <select id="subjectSelect" disabled aria-label="المادة">
           <option value="">— اختر المادة —</option>
         </select>
+      <div class="field">
+        <label for="ghUser">٣ — اسمك على GitHub (username)</label>
+        <input type="text" id="ghUser" placeholder="مثال: ahmad-dev" autocomplete="username" spellcheck="false">
+        <p class="hint" style="font-size:0.8rem;color:#888;margin:0.35rem 0 0">بعد Fork — نفس الاسم اللي فوق يمين صفحتك على GitHub</p>
       </div>
     </div>
 
@@ -139,29 +151,29 @@ async function main() {
       <h2 class="card__title" id="cardTitle"></h2>
       <p class="card__path" id="cardPath"></p>
       <div class="actions">
-        <a class="btn btn--primary is-disabled" id="btnFork" href="#" target="_blank" rel="noopener">① Fork المستودع (مرة واحدة)</a>
-        <a class="btn btn--primary is-disabled" id="btnSubmit" href="#" target="_blank" rel="noopener">② رفع محاضرة (parN.md)</a>
-        <a class="btn is-disabled" id="btnPr" href="#" target="_blank" rel="noopener">③ فتح Pull Request</a>
-        <a class="btn btn--ghost is-disabled" id="btnFolder" href="#" target="_blank" rel="noopener">📁 عرض مجلد المحاضرات</a>
+        <a class="btn btn--primary is-disabled" id="btnFork" href="#" target="_blank" rel="noopener">① Fork المستودع</a>
+        <a class="btn btn--primary is-disabled" id="btnUpload" href="#" target="_blank" rel="noopener">② Upload files (parN.md)</a>
+        <a class="btn is-disabled" id="btnPr" href="#" target="_blank" rel="noopener">③ Open Pull Request</a>
+        <a class="btn btn--ghost is-disabled" id="btnFolder" href="#" target="_blank" rel="noopener">📁 عرض المجلد</a>
       </div>
+      <p class="upload-url" id="uploadUrlHint" hidden></p>
     </article>
 
     <div class="steps">
-      <strong>الخطوات بالترتيب:</strong>
+      <strong>بعد Upload files:</strong>
       <ol>
-        <li>سجّل دخول على <a href="https://github.com/login" target="_blank" rel="noopener">GitHub</a></li>
-        <li>① <strong>Fork المستودع</strong> — مرة واحدة لكل حساب</li>
-        <li>② <strong>رفع محاضرة</strong> — يفتح محرّر؛ غيّروا <code>parN.md</code> لرقم المحاضرة</li>
-        <li>الصقوا المحتوى → Commit → اختاروا <strong>Propose changes</strong> / <strong>start a pull request</strong></li>
-        <li>③ أو اضغطوا <strong>فتح Pull Request</strong> بعد الحفظ</li>
-        <li>بعد CI → أنتِ Merge → الموقع يتحدّث</li>
+        <li>اسحبوا ملف <code>parN.md</code> (أو <code>parN-secM.md</code>) — <strong>drag &amp; drop</strong></li>
+        <li>Commit message → اختاروا <strong>Propose changes</strong> / <strong>Create a new branch and start a pull request</strong></li>
+        <li>أو اضغطوا ③ <strong>Open Pull Request</strong></li>
+        <li>بعد CI → Merge → الموقع يتحدّث</li>
       </ol>
       <div class="naming">
         <strong>تسمية الملف:</strong><br>
-        <code>parN.md</code> — محاضرة كاملة<br>
-        <code>parN-secM.md</code> — جزء من محاضرة<br>
-        <span style="color:#666">مثال: <code>par1.md</code> · <code>par1-sec1.md</code></span>
+        <code>parN.md</code> · <code>par1-sec1.md</code> · <code>par5-sec3.md</code>
       </div>
+      <p class="note" style="border-top:none;padding-top:0.75rem;margin-top:0.75rem;font-size:0.85rem">
+        بدل رفع ملف؟ <a id="btnPaste" href="#" target="_blank" rel="noopener">الصق نص في محرّر GitHub</a> (أقل راحة)
+      </p>
     </div>
 
     ${subjects.length ? '' : '<p class="empty">لا توجد مواد بعد.</p>'}
@@ -175,29 +187,70 @@ async function main() {
     const MAIN_BRANCH = ${JSON.stringify(MAIN_BRANCH)};
     const SUBJECTS = ${subjectsJson};
 
+    const REPO_NAME = ${JSON.stringify(REPO.split('/')[1])};
+    const REPO_OWNER = ${JSON.stringify(REPO.split('/')[0])};
+
     const yearSelect = document.getElementById('yearSelect');
     const subjectSelect = document.getElementById('subjectSelect');
+    const ghUserInput = document.getElementById('ghUser');
     const card = document.getElementById('subjectCard');
     const cardTitle = document.getElementById('cardTitle');
     const cardPath = document.getElementById('cardPath');
     const btnFork = document.getElementById('btnFork');
-    const btnSubmit = document.getElementById('btnSubmit');
+    const btnUpload = document.getElementById('btnUpload');
     const btnPr = document.getElementById('btnPr');
     const btnFolder = document.getElementById('btnFolder');
+    const btnPaste = document.getElementById('btnPaste');
+    const uploadUrlHint = document.getElementById('uploadUrlHint');
+
+    const savedUser = localStorage.getItem('contrib-gh-user');
+    if (savedUser) ghUserInput.value = savedUser;
 
     function encPath(folder) {
       return folder.split('/').map(encodeURIComponent).join('/');
     }
 
-    /** Full file path in URL — works even when lectures/ was just scaffolded. */
+    function ghUser() {
+      return ghUserInput.value.trim().replace(/^@/, '');
+    }
+
+    /** File upload on user's fork — /upload/ gives drag-and-drop, not text editor. */
     function contribUrls(s) {
-      const filePath = s.path + '/parN.md';
+      const user = ghUser();
+      const enc = encPath(s.path);
+      const forkBase = user
+        ? 'https://github.com/' + encodeURIComponent(user) + '/' + REPO_NAME
+        : GH;
       return {
         fork: GH + '/fork',
-        newPar: GH + '/new/' + encodeURIComponent(MAIN_BRANCH) + '/' + encPath(filePath),
-        openPr: GH + '/compare/' + encodeURIComponent(MAIN_BRANCH) + '?expand=1',
-        folder: GH + '/tree/' + encodeURIComponent(MAIN_BRANCH) + '/' + encPath(s.path),
+        upload: forkBase + '/upload/' + encodeURIComponent(MAIN_BRANCH) + '/' + enc,
+        paste: GH + '/new/' + encodeURIComponent(MAIN_BRANCH) + '/' + encPath(s.path + '/parN.md'),
+        openPr: GH + '/compare/' + encodeURIComponent(REPO_OWNER) + ':' + encodeURIComponent(MAIN_BRANCH) + '...' + (user ? encodeURIComponent(user) + ':' : '') + encodeURIComponent(MAIN_BRANCH) + '?expand=1',
+        folder: GH + '/tree/' + encodeURIComponent(MAIN_BRANCH) + '/' + enc,
       };
+    }
+
+    function refreshSubject() {
+      const s = SUBJECTS.find(x => x.id === subjectSelect.value);
+      if (!s) { hideCard(); return; }
+      const urls = contribUrls(s);
+      const user = ghUser();
+      cardTitle.textContent = s.title;
+      cardPath.textContent = s.path + '/';
+      setBtn(btnFork, urls.fork, true);
+      setBtn(btnUpload, urls.upload, !!user);
+      setBtn(btnPr, urls.openPr, !!user);
+      setBtn(btnFolder, urls.folder, true);
+      setBtn(btnPaste, urls.paste, true);
+      if (user) {
+        uploadUrlHint.hidden = false;
+        uploadUrlHint.textContent = urls.upload;
+        localStorage.setItem('contrib-gh-user', user);
+      } else {
+        uploadUrlHint.hidden = false;
+        uploadUrlHint.textContent = '↑ اكتب GitHub username أولاً لتفعيل Upload files';
+      }
+      card.classList.add('is-visible');
     }
 
     function setBtn(btn, href, on) {
@@ -208,21 +261,16 @@ async function main() {
     function hideCard() {
       card.classList.remove('is-visible');
       setBtn(btnFork, '#', false);
-      setBtn(btnSubmit, '#', false);
+      setBtn(btnUpload, '#', false);
       setBtn(btnPr, '#', false);
       setBtn(btnFolder, '#', false);
+      setBtn(btnPaste, '#', false);
+      uploadUrlHint.hidden = true;
     }
 
-    function showSubject(s) {
-      const urls = contribUrls(s);
-      cardTitle.textContent = s.title;
-      cardPath.textContent = s.path + '/parN.md';
-      setBtn(btnFork, urls.fork, true);
-      setBtn(btnSubmit, urls.newPar, true);
-      setBtn(btnPr, urls.openPr, true);
-      setBtn(btnFolder, urls.folder, true);
-      card.classList.add('is-visible');
-    }
+    ghUserInput.addEventListener('input', () => {
+      if (subjectSelect.value) refreshSubject();
+    });
 
     yearSelect.addEventListener('change', () => {
       const y = Number(yearSelect.value);
@@ -243,8 +291,7 @@ async function main() {
     });
 
     subjectSelect.addEventListener('change', () => {
-      const s = SUBJECTS.find(x => x.id === subjectSelect.value);
-      if (s) showSubject(s);
+      if (SUBJECTS.find(x => x.id === subjectSelect.value)) refreshSubject();
       else hideCard();
     });
 
