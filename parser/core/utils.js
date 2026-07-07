@@ -22,7 +22,7 @@ export function parseAlgorithmLines(code) {
     .filter(Boolean)
     .map(line => {
       const parts = line.split('|').map(p => p.trim());
-      const num = parts[0]?.replace(/[^\d]/g, '') || '';
+      const num = parts[0]?.trim() || '';
       return {
         num: num || parts[0],
         step: parts[1] || '',

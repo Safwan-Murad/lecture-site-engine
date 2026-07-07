@@ -35,7 +35,7 @@ export function runSchemaChecks(text, fileLabel = 'file') {
     }
     if (inAlgorithmFence && t) {
       algorithmLine += 1;
-      if (!/^\d+(?:[أ-ي])?\s*\|/.test(t)) {
+      if (!/^\d+(?:[a-zأ-ي])?\s*\|/i.test(t)) {
         push('error', n, `algorithm line ${algorithmLine}: expected "N | step | tool | detail", got: ${t.slice(0, 60)}`);
       }
     }

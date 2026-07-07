@@ -269,10 +269,10 @@ If (action [s, a]== reduce k) then
 1 | تهيئة المكدّس     | Stack          | ادفع الحالة الابتدائية 0 و $ على المكدّس
 2 | قراءة الرمز       | Input          | اقرأ أول رمز من الدخل → a
 3 | استعلام ACTION    | ACTION Table   | ابحث عن ACTION[s, a] حيث s = رأس المكدّس الحالي
-4أ | إذا Shift k      | Stack          | ادفع (a, k) على المكدّس؛ اقرأ الرمز التالي؛ ارجع لخطوة 3
-4ب | إذا Reduce k     | Stack/GOTO     | اسحب 2*|RHS(k)| عنصراً؛ s' = رأس المكدّس الجديد؛ ادفع (LHS(k), GOTO[s',LHS(k)]); ارجع لخطوة 3
-4ج | إذا Accept       | Output         | توقف — الجملة مقبولة ✅
-4د | إذا Error        | Error Handler  | الجملة خاطئة نحوياً ❌
+4a | إذا Shift k      | Stack          | ادفع (a, k) على المكدّس؛ اقرأ الرمز التالي؛ ارجع لخطوة 3
+4b | إذا Reduce k     | Stack/GOTO     | اسحب 2*|RHS(k)| عنصراً؛ s' = رأس المكدّس الجديد؛ ادفع (LHS(k), GOTO[s',LHS(k)]); ارجع لخطوة 3
+4c | إذا Accept       | Output         | توقف — الجملة مقبولة ✅
+4d | إذا Error        | Error Handler  | الجملة خاطئة نحوياً ❌
 ```
 
 #### نقاط التنفيذ:
@@ -427,10 +427,10 @@ If (action [s, a]== reduce k) then
 ```algorithm
 1 | تهيئة         | Stack        | Stack = [$, 0]؛ اقرأ الرمز الأول a من الدخل
 2 | قراءة الجدول  | ACTION Table | s = رأس المكدّس؛ ابحث ACTION[s, a]
-3أ | Shift k      | Stack        | ادفع (a, k)؛ اقرأ رمزاً جديداً؛ ارجع للخطوة 2
-3ب | Reduce k     | Stack+GOTO   | n = |RHS(k)|؛ اسحب 2n عنصراً؛ s' = رأس المكدّس؛ A = LHS(k)؛ ادفع (A, GOTO[s',A])؛ ارجع للخطوة 2
-3ج | Accept       | —            | انجاح! توقف
-3د | Error        | —            | خطأ نحوي؛ توقف
+3a | Shift k      | Stack        | ادفع (a, k)؛ اقرأ رمزاً جديداً؛ ارجع للخطوة 2
+3b | Reduce k     | Stack+GOTO   | n = |RHS(k)|؛ اسحب 2n عنصراً؛ s' = رأس المكدّس؛ A = LHS(k)؛ ادفع (A, GOTO[s',A])؛ ارجع للخطوة 2
+3c | Accept       | —            | انجاح! توقف
+3d | Error        | —            | خطأ نحوي؛ توقف
 ```
 
 #### نقاط التنفيذ:
