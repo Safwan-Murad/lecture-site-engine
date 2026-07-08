@@ -331,8 +331,8 @@ function renderHtml(subjects) {
     const stats = yearBlockStats(subjects, yearNum);
     const cards = byYear[y].map(s => renderSubjectCard(s, yearNum, cardIndex++)).join('\n');
     return `
-    <section id="year-${yearNum}" class="year-panel" style="--year-primary:${accent.primary};--year-secondary:${accent.secondary};--year-fixed:${accent.fixed}">
-      <header class="year-panel__header">
+    <details id="year-${yearNum}" class="year-panel" style="--year-primary:${accent.primary};--year-secondary:${accent.secondary};--year-fixed:${accent.fixed}">
+      <summary class="year-panel__header">
         <div class="year-panel__badge" aria-hidden="true">${toArabicDigits(y)}</div>
         <div class="year-panel__intro">
           <h2>السنة ${accent.label}</h2>
@@ -348,11 +348,12 @@ function renderHtml(subjects) {
             ${toArabicDigits(stats.lectures)} محاضرة
           </span>
         </div>
-      </header>
+        <span class="year-panel__toggle material-symbols-outlined" aria-hidden="true">expand_more</span>
+      </summary>
       <div class="year-panel__body">
         <div class="grid">${cards}</div>
       </div>
-    </section>`;
+    </details>`;
   }).join('\n');
 
   const heroStats = `
@@ -610,17 +611,29 @@ function renderHtml(subjects) {
       gap: 1rem;
       flex-wrap: wrap;
       padding: 1.15rem 1.35rem;
-      border-radius: 1.25rem 1.25rem 0 0;
+      border-radius: 1.25rem;
       background: linear-gradient(
         135deg,
         color-mix(in srgb, var(--year-fixed) 80%, #fff) 0%,
         #fff 100%
       );
       border: 1px solid color-mix(in srgb, var(--year-primary) 16%, #e2e8f0);
-      border-bottom: none;
       position: relative;
       overflow: hidden;
+      cursor: pointer;
+      list-style: none;
     }
+    .year-panel__header::-webkit-details-marker { display: none; }
+    .year-panel[open] > .year-panel__header {
+      border-radius: 1.25rem 1.25rem 0 0;
+      border-bottom: none;
+    }
+    .year-panel__toggle {
+      margin-inline-start: auto;
+      color: var(--year-primary);
+      transition: transform 0.2s ease;
+    }
+    .year-panel[open] .year-panel__toggle { transform: rotate(180deg); }
     .dark .year-panel__header {
       background: linear-gradient(135deg, #111827 0%, #0f172a 100%);
       border-color: rgba(79,146,255,.16);
@@ -1049,6 +1062,7 @@ function renderHtml(subjects) {
             if (!id) return;
             const target = document.getElementById(id);
             if (!target) return;
+            if (target.tagName === 'DETAILS') target.open = true;
             const targetY = targetYFor(target);
             if (prefersReducedMotion) {
               setScrollY(targetY);

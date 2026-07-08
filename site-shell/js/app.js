@@ -12,6 +12,16 @@ import {
 
 const STORAGE_THEME = `${GUIDE_CONFIG.storagePrefix || 'study-guide'}-theme`;
 const STORAGE_LAST_LECTURE = `${GUIDE_CONFIG.storagePrefix || 'study-guide'}-last-lecture`;
+const STORAGE_LECTURE_WIDTH = `${GUIDE_CONFIG.storagePrefix || 'study-guide'}-lecture-width`;
+const LECTURE_WIDTH_OPTIONS = [
+  { value: '50', label: '50%' },
+  { value: '70', label: '70%' },
+  { value: '100', label: '100%' },
+  { value: '120', label: '120%' },
+  { value: '150', label: '150%' },
+  { value: 'fill', label: 'ملء' },
+];
+const DEFAULT_LECTURE_WIDTH = '50';
 
 const {
   renderLecture,
@@ -78,6 +88,10 @@ function showView(name) {
   document.getElementById('homeView')?.classList.toggle('hidden', name !== 'home');
   document.getElementById('lectureView')?.classList.toggle('hidden', name !== 'lecture');
   document.getElementById('backToHomeBtn')?.classList.toggle('hidden', name === 'home');
+  document.getElementById('lectureWidthControl')?.classList.toggle('hidden', name !== 'lecture');
+  document.getElementById('mobileStudyBar')?.classList.toggle('hidden', name !== 'lecture');
+  document.documentElement.classList.toggle('is-lecture-view', name === 'lecture');
+  if (name !== 'lecture') closeMobileToc();
 }
 
 async function loadManifest() {
@@ -176,49 +190,56 @@ function scrollAfterLectureLoad(hashPart, item) {
 }
 
 function setActiveNavLink(activeEl) {
+  const href = activeEl?.getAttribute('href');
   document.querySelectorAll('.toc-nav-link').forEach(a => {
     a.classList.remove('bg-primary-container', 'text-on-primary-container', 'border-primary', 'font-bold');
     a.classList.add('text-on-surface-variant');
+    if (href && a.getAttribute('href') === href) {
+      a.classList.add('bg-primary-container', 'text-on-primary-container', 'border-primary', 'font-bold');
+      a.classList.remove('text-on-surface-variant');
+    }
   });
-  if (activeEl) {
-    activeEl.classList.add('bg-primary-container', 'text-on-primary-container', 'border-primary', 'font-bold');
-    activeEl.classList.remove('text-on-surface-variant');
-  }
 }
 
 function buildSidebar(toc) {
-  const container = document.getElementById('sidebarToc');
-  if (!container || !toc) return;
+  const containers = [
+    document.getElementById('sidebarToc'),
+    document.getElementById('mobileTocNav'),
+  ].filter(Boolean);
+  if (!containers.length || !toc) return;
 
   if (sidebarObserver) {
     sidebarObserver.disconnect();
     sidebarObserver = null;
   }
 
-  container.innerHTML = '';
+  containers.forEach(c => { c.innerHTML = ''; });
   const allLinks = [];
 
   toc.parts.forEach(part => {
     const partLabel = part.title
       .replace(/^الجزء[^:]+:\s*/, '')
       .replace(/^📌\s*/, '');
-    const link = document.createElement('a');
-    link.href = `#${part.id}`;
-    link.className = 'toc-nav-link flex items-center gap-md text-on-surface-variant hover:bg-surface-container-high p-md transition-all mx-md mb-xs font-label-md text-label-md rounded-l-lg border-r-4 border-transparent';
-    link.innerHTML = `${ms(part.icon, false, 'text-lg shrink-0')}<span class="line-clamp-2">${esc(partLabel)}</span>`;
-    link.dataset.partType = part.type;
-    container.appendChild(link);
-    allLinks.push({ el: link, target: null });
 
-    (part.subsections || []).forEach(sub => {
-      const subLink = document.createElement('a');
-      const subId = `${part.id}-${sub.id}`;
-      const indent = sub.level >= 5 ? 'mr-2xl' : sub.level >= 4 ? 'mr-xl' : 'mr-lg';
-      subLink.href = `#${subId}`;
-      subLink.className = `toc-nav-link flex items-center gap-sm text-on-surface-variant hover:bg-surface-container-high py-xs px-md transition-all ${indent} mb-xs font-label-md text-label-md rounded-l-lg border-r-4 border-transparent opacity-80`;
-      subLink.innerHTML = `${ms('chevron_left', false, 'text-sm shrink-0')}<span class="line-clamp-2 text-xs leading-snug">${esc(sub.text.replace(/^\d+(?:\.\d+)*\.?\s*/, ''))}</span>`;
-      container.appendChild(subLink);
-      allLinks.push({ el: subLink, target: null });
+    containers.forEach(container => {
+      const link = document.createElement('a');
+      link.href = `#${part.id}`;
+      link.className = 'toc-nav-link flex items-center gap-md text-on-surface-variant hover:bg-surface-container-high p-md transition-all mx-md mb-xs font-label-md text-label-md rounded-l-lg border-r-4 border-transparent';
+      link.innerHTML = `${ms(part.icon, false, 'text-lg shrink-0')}<span class="line-clamp-2">${esc(partLabel)}</span>`;
+      link.dataset.partType = part.type;
+      container.appendChild(link);
+      if (container === containers[0]) allLinks.push({ el: link, target: null });
+
+      (part.subsections || []).forEach(sub => {
+        const subLink = document.createElement('a');
+        const subId = `${part.id}-${sub.id}`;
+        const indent = sub.level >= 5 ? 'mr-2xl' : sub.level >= 4 ? 'mr-xl' : 'mr-lg';
+        subLink.href = `#${subId}`;
+        subLink.className = `toc-nav-link flex items-center gap-sm text-on-surface-variant hover:bg-surface-container-high py-xs px-md transition-all ${indent} mb-xs font-label-md text-label-md rounded-l-lg border-r-4 border-transparent opacity-80`;
+        subLink.innerHTML = `${ms('chevron_left', false, 'text-sm shrink-0')}<span class="line-clamp-2 text-xs leading-snug">${esc(sub.text.replace(/^\d+(?:\.\d+)*\.?\s*/, ''))}</span>`;
+        container.appendChild(subLink);
+        if (container === containers[0]) allLinks.push({ el: subLink, target: null });
+      });
     });
   });
 
@@ -233,11 +254,11 @@ function buildSidebar(toc) {
     (entries) => {
       const visible = entries
         .filter((e) => e.isIntersecting)
-      .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-    if (visible.length) {
-      const link = allLinks.find(l => l.target === visible[0].target)?.el;
-      if (link) setActiveNavLink(link);
-    }
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+      if (visible.length) {
+        const link = allLinks.find(l => l.target === visible[0].target)?.el;
+        if (link) setActiveNavLink(link);
+      }
     },
     {
       rootMargin: `-${SCROLL_OFFSET_PX + 8}px 0px -65% 0px`,
@@ -245,19 +266,30 @@ function buildSidebar(toc) {
     },
   );
 
-  allLinks.forEach(item => {
-    if (item.target) sidebarObserver.observe(item.target);
-    item.el.addEventListener('click', e => {
+  document.querySelectorAll('.toc-nav-link').forEach(link => {
+    const id = anchorIdFromHash(link.hash);
+    const target = id ? document.getElementById(id) : null;
+    const primary = allLinks.find(l => l.el.getAttribute('href') === link.getAttribute('href'));
+    if (primary && target) primary.target = target;
+
+    link.addEventListener('click', e => {
       e.preventDefault();
-      const id = anchorIdFromHash(item.el.hash);
-      if (!id) return;
-      if (location.hash !== `#${id}`) location.hash = id;
-      else scrollToAnchor(id);
-      if (item.target) {
-        setActiveNavLink(item.el);
-        revealAnimated(item.target);
-      }
+      const anchorId = anchorIdFromHash(link.hash);
+      if (!anchorId) return;
+      if (location.hash !== `#${anchorId}`) location.hash = anchorId;
+      else scrollToAnchor(anchorId);
+      setActiveNavLink(link);
+      if (target) revealAnimated(target);
+      closeMobileToc();
     });
+  });
+
+  const observed = new Set();
+  allLinks.forEach(item => {
+    if (item.target && !observed.has(item.target)) {
+      observed.add(item.target);
+      sidebarObserver.observe(item.target);
+    }
   });
 }
 
@@ -308,6 +340,9 @@ function loadLectureView(idx, hashPart) {
     document.getElementById('sidebarCourseTitle').textContent = shortLectureTitle(item.lec.title);
     document.getElementById('sidebarCourseSub').textContent = item.lec.tag || '';
     document.getElementById('sidebarMatIcon').textContent = item.matIcon || 'school';
+    document.getElementById('mobileTocCourseTitle').textContent = shortLectureTitle(item.lec.title);
+    document.getElementById('mobileTocCourseSub').textContent = item.lec.tag || '';
+    document.getElementById('mobileTocMatIcon').textContent = item.matIcon || 'school';
 
     setRefContext({ lectureRef: item.lec.id, sectionMap: item.sectionIndex || {} });
     const html = renderLecture(item.lec, 'primary', item.icon, item.sectionIndex);
@@ -335,13 +370,117 @@ function loadLectureView(idx, hashPart) {
     else window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function jumpToQuiz() {
+  const item = appState.items[currentLectureIndex];
+  if (!item) return;
+  const quiz = item.toc?.parts?.find(p => /mcq|اختبار/i.test(p.title));
+  if (quiz) location.hash = quiz.id;
+  else document.getElementById('content')?.querySelector('.mcq-part')?.scrollIntoView({ behavior: 'smooth' });
+  closeMobileToc();
+}
+
 function initJumpQuiz() {
-  document.getElementById('jumpQuizBtn')?.addEventListener('click', () => {
-    const item = appState.items[currentLectureIndex];
-    if (!item) return;
-    const quiz = item.toc?.parts?.find(p => /mcq|اختبار/i.test(p.title));
-    if (quiz) location.hash = quiz.id;
-    else document.getElementById('content')?.querySelector('.mcq-part')?.scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('jumpQuizBtn')?.addEventListener('click', jumpToQuiz);
+  document.getElementById('mobileJumpQuizBtn')?.addEventListener('click', jumpToQuiz);
+  document.getElementById('mobileStudyQuizBtn')?.addEventListener('click', jumpToQuiz);
+}
+
+function normalizeLectureWidth(value) {
+  if (value === '30') return DEFAULT_LECTURE_WIDTH;
+  if (LECTURE_WIDTH_OPTIONS.some(opt => opt.value === value)) return value;
+  return DEFAULT_LECTURE_WIDTH;
+}
+
+function readStoredLectureWidth() {
+  const saved = localStorage.getItem(STORAGE_LECTURE_WIDTH);
+  if (saved) return normalizeLectureWidth(saved);
+  if (localStorage.getItem(`${GUIDE_CONFIG.storagePrefix || 'study-guide'}-lecture-wide`) === '1') return 'fill';
+  return DEFAULT_LECTURE_WIDTH;
+}
+
+function lectureWidthLabel(mode) {
+  return LECTURE_WIDTH_OPTIONS.find(opt => opt.value === mode)?.label || mode;
+}
+
+function applyLectureWidth(width) {
+  const mode = normalizeLectureWidth(width);
+  const view = document.getElementById('lectureView');
+  const btn = document.getElementById('lectureWidthBtn');
+  view?.setAttribute('data-width', mode);
+  if (mode === 'fill') {
+    view?.style.removeProperty('--lecture-body-width');
+  } else {
+    view?.style.setProperty('--lecture-body-width', `${mode}%`);
+  }
+  btn?.setAttribute('title', `عرض المحتوى: ${lectureWidthLabel(mode)}`);
+  document.querySelectorAll('.lecture-width-menu__item').forEach(item => {
+    item.classList.toggle('is-active', item.dataset.width === mode);
+    item.setAttribute('aria-checked', String(item.dataset.width === mode));
+  });
+}
+
+function closeLectureWidthMenu() {
+  const menu = document.getElementById('lectureWidthMenu');
+  const btn = document.getElementById('lectureWidthBtn');
+  menu?.classList.add('hidden');
+  btn?.setAttribute('aria-expanded', 'false');
+}
+
+function initLectureWidthToggle() {
+  const btn = document.getElementById('lectureWidthBtn');
+  const menu = document.getElementById('lectureWidthMenu');
+  if (!btn || !menu || btn.dataset.bound === '1') return;
+  btn.dataset.bound = '1';
+
+  menu.innerHTML = LECTURE_WIDTH_OPTIONS.map(opt => `
+    <button type="button" class="lecture-width-menu__item" role="menuitemradio" data-width="${opt.value}">
+      ${opt.label}
+    </button>`).join('');
+
+  applyLectureWidth(readStoredLectureWidth());
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu.classList.toggle('hidden');
+    btn.setAttribute('aria-expanded', String(!menu.classList.contains('hidden')));
+  });
+
+  menu.querySelectorAll('.lecture-width-menu__item').forEach(item => {
+    item.addEventListener('click', () => {
+      const mode = normalizeLectureWidth(item.dataset.width);
+      localStorage.setItem(STORAGE_LECTURE_WIDTH, mode);
+      applyLectureWidth(mode);
+      closeLectureWidthMenu();
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#lectureWidthControl')) closeLectureWidthMenu();
+  });
+}
+
+function openMobileToc() {
+  document.getElementById('mobileTocDrawer')?.classList.remove('hidden');
+  document.getElementById('mobileTocBackdrop')?.classList.remove('hidden');
+  document.getElementById('mobileTocDrawer')?.setAttribute('aria-hidden', 'false');
+  document.getElementById('mobileTocBackdrop')?.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeMobileToc() {
+  document.getElementById('mobileTocDrawer')?.classList.add('hidden');
+  document.getElementById('mobileTocBackdrop')?.classList.add('hidden');
+  document.getElementById('mobileTocDrawer')?.setAttribute('aria-hidden', 'true');
+  document.getElementById('mobileTocBackdrop')?.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+function initMobileStudyUi() {
+  document.getElementById('mobileTocOpen')?.addEventListener('click', openMobileToc);
+  document.getElementById('mobileTocClose')?.addEventListener('click', closeMobileToc);
+  document.getElementById('mobileTocBackdrop')?.addEventListener('click', closeMobileToc);
+  document.getElementById('mobileScrollTopBtn')?.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 }
 
@@ -373,6 +512,8 @@ async function init() {
   initInteractivity();
   initScrollFab();
   initJumpQuiz();
+  initLectureWidthToggle();
+  initMobileStudyUi();
   document.getElementById('backToHomeBtn')?.addEventListener('click', () => {
     location.hash = 'home';
     window.scrollTo({ top: 0, behavior: 'smooth' });
