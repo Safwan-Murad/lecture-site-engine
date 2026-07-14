@@ -17,6 +17,7 @@ import {
   updateAnalyticsContext,
 } from './analytics.js';
 import { initLaserPointer } from './laser-pointer.js';
+import { search, snippet } from './search.js';
 
 /** Set true when lecture notes localStorage behaviour is ready. */
 const LECTURE_NOTES_ENABLED = false;
@@ -1015,6 +1016,159 @@ function initServiceWorker() {
   navigator.serviceWorker.register(swUrl).catch(() => {});
 }
 
+/**
+ * Navigate to a lecture (and optional anchor) from a search result.
+ * Calls ensureLectureLoaded then scrolls.
+ */
+function navigateToLectureSearch(lecId, anchorId) {
+  const idx = appState.items.findIndex(it => it.lec.id === lecId);
+  if (idx < 0) return;
+
+  const targetHash = (!anchorId || anchorId === lecId) ? lecId : anchorId;
+  location.hash = targetHash;
+}
+
+function closeSearchResults() {
+  const el = document.getElementById('searchResults');
+  if (el) el.classList.add('hidden');
+  document.getElementById('searchInput')?.setAttribute('aria-expanded', 'false');
+}
+
+function initSearch() {
+  const input = document.getElementById('searchInput');
+  const results = document.getElementById('searchResults');
+  const clearBtn = document.getElementById('searchClearBtn');
+  if (!input || !results) return;
+
+  let debounceTimer = null;
+
+  function renderResults(q) {
+    if (!q || !q.trim()) {
+      results.classList.add('hidden');
+      input.setAttribute('aria-expanded', 'false');
+      clearBtn?.classList.add('hidden');
+      return;
+    }
+    clearBtn?.classList.remove('hidden');
+
+    search(q, 15).then(matches => {
+      if (input.value.trim() !== q.trim()) return; // stale response
+
+      if (!matches.length) {
+        results.innerHTML = `<div class="p-lg text-center text-on-surface-variant font-label-md">لا نتائج لـ "${esc(q)}"</div>`;
+        results.classList.remove('hidden');
+        input.setAttribute('aria-expanded', 'true');
+        return;
+      }
+
+      const seen = new Set();
+      let html = '';
+      for (const { entry } of matches) {
+        const key = entry.id;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        const icon = entry.kind === 'lecture' ? 'description'
+          : entry.kind === 'part' ? 'chapter'
+          : entry.kind === 'section' ? 'format_list_bulleted'
+          : 'article';
+
+        const ctx = entry.kind === 'lecture' ? `محاضرة ${entry.lecNum}`
+          : entry.kind !== 'content' ? (entry.context || `محاضرة ${entry.lecNum}`)
+          : `${entry.context || `محاضرة ${entry.lecNum}`}`;
+
+        const label = entry.title || entry.text || '';
+        const snip = snippet(entry, q, 60);
+
+        html += `
+          <button type="button" class="search-result-item flex items-start gap-md w-full text-right px-lg py-md hover:bg-surface-container-high transition-all border-b border-outline-variant last:border-b-0 cursor-pointer"
+            data-lec-id="${escAttr(entry.lecId)}"
+            data-anchor="${escAttr(entry.id)}"
+            role="option"
+            aria-label="${escAttr(label)}">
+            <span class="material-symbols-outlined text-primary shrink-0 mt-xs" aria-hidden="true">${icon}</span>
+            <div class="min-w-0 flex-1">
+              <div class="font-label-md text-label-md text-on-surface truncate">${esc(label)}</div>
+              <div class="font-code-sm text-code-sm text-on-surface-variant truncate">${esc(ctx)}</div>
+              <div class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 mt-xs">${esc(snip)}</div>
+            </div>
+          </button>`;
+      }
+
+      results.innerHTML = html;
+      results.classList.remove('hidden');
+      input.setAttribute('aria-expanded', 'true');
+
+      // Click handlers
+      results.querySelectorAll('.search-result-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lecId = btn.dataset.lecId;
+          const anchor = btn.dataset.anchor;
+          closeSearchResults();
+          input.value = '';
+          clearBtn?.classList.add('hidden');
+          navigateToLectureSearch(lecId, anchor);
+        });
+      });
+    }).catch(err => {
+      console.warn('Search error:', err);
+    });
+  }
+
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const q = input.value;
+    debounceTimer = setTimeout(() => renderResults(q), 150);
+  });
+
+  input.addEventListener('focus', () => {
+    if (input.value.trim()) renderResults(input.value);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeSearchResults();
+      input.blur();
+    }
+    if (e.key === 'Enter') {
+      const first = results.querySelector('.search-result-item');
+      if (first) first.click();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#searchContainer')) closeSearchResults();
+  });
+
+  clearBtn?.addEventListener('click', () => {
+    input.value = '';
+    closeSearchResults();
+    clearBtn.classList.add('hidden');
+    input.focus();
+  });
+
+  // Navbar search button
+  document.getElementById('navbarSearchBtn')?.addEventListener('click', () => {
+    if (currentView !== 'home') goToSubjectHome();
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 100);
+  });
+
+  // Keyboard shortcut: Ctrl+Shift+F
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+      e.preventDefault();
+      if (currentView !== 'home') goToSubjectHome();
+      setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 100);
+    }
+  });
+}
+
 async function init() {
   initTheme();
   initLaserPointer();
@@ -1025,6 +1179,7 @@ async function init() {
   initLectureWidthToggle();
   if (LECTURE_NOTES_ENABLED) initLectureNotes();
   initMobileStudyUi();
+  initSearch();
   document.getElementById('backToHomeBtn')?.addEventListener('click', goToSubjectHome);
   document.getElementById('backToHubBtn')?.addEventListener('click', goToHubHome);
   document.getElementById('brandBtn')?.addEventListener('click', handleBrandClick);

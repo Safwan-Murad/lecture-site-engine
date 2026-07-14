@@ -4024,3 +4024,24 @@ body.laser-pointer-enabled button {
   }
 }
 
+/* ── Search ─────────────────────────────────────────────────────────────── */
+#searchContainer input[type="search"]::-webkit-search-decoration,
+#searchContainer input[type="search"]::-webkit-search-cancel-button,
+#searchContainer input[type="search"]::-webkit-search-results-button,
+#searchContainer input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+}
+
+#searchResults {
+  scrollbar-width: thin;
+}
+
+.search-result-item {
+  transition: background-color 0.15s ease;
+}
+
+.search-result-item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
